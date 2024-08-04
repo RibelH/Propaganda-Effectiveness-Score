@@ -1,9 +1,15 @@
 import pdb
+import time
 from pathlib import Path
 import pathlib 
 import re
 import sys
 from operator import itemgetter
+
+import sys
+import io
+sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8')
+timestr = time.strftime("%Y%m%d-%H%M%S")
 
 def read_data(directory):
     ids = []
@@ -11,7 +17,8 @@ def read_data(directory):
     for f in directory.glob('*.txt'):
         id = f.name.replace('article', '').replace('.txt','')
         ids.append(id)
-        texts.append(f.read_text())
+        texts.append(f.read_text(encoding="utf8"))
+
     return ids, texts
 
 def clean_text(articles, ids):
@@ -61,7 +68,9 @@ def remove_duplicates(res):
 
 
 def convert(ids, texts, ind, flat_texts, filename):
-    with open(filename, 'r') as f1:
+    with open(filename, 'r', encoding='utf-8') as f1:  # Open in binary mode
+        print("Filename:", filename)
+        wait = input("Press Enter to continue.")
         output = []
         for line in f1:
             if len(line.split()) == 1: # if line is id 
@@ -76,9 +85,9 @@ def convert(ids, texts, ind, flat_texts, filename):
                 output.append(tmp + [len(tmp[1])]) # add word length to line
             else: 
                 output.append('\n')
-
     res = []
     aid = output[0][0]
+    print("AID:", aid)
     sub_list = [sentence for sentence in flat_texts if sentence[0] == aid]
     sub_dic = {sentence:(start, end) for _, sentence, start, end in sub_list}
 
@@ -122,9 +131,11 @@ def convert(ids, texts, ind, flat_texts, filename):
             cur = 0
             sub_list = [sentence for sentence in flat_texts if sentence[0] == aid]
             sub_dic = {sentence:(start, end) for _, sentence, start, end in sub_list}
-
             if len(tmp_ans) and sentence[:-1] != "":
-                s, e = sub_dic.get(sentence[:-1])
+                try:
+                    s, e = sub_dic.get(sentence[:-1])
+                except:
+                    wait = input("Press Enter to continue.")
                 for ans in tmp_ans:
                     ans[2] += s
                     ans[3] += s 
@@ -137,9 +148,9 @@ def convert(ids, texts, ind, flat_texts, filename):
 
 if __name__ == "__main__":
 
-    directory = pathlib.Path('./data/protechn_corpus_eval/test')
+    directory = pathlib.Path('./data/protechn_corpus_eval/{0}'.format(sys.argv[3]))
     ids, texts = read_data(directory)
-    
+
     t_texts = clean_text(texts, ids)
     flat_texts = [sentence for article in t_texts for sentence in article]
 
@@ -149,11 +160,15 @@ if __name__ == "__main__":
     if sys.argv[2] == 'bert':
         fi = convert(ids, texts, 0, flat_texts, sys.argv[1])
     elif sys.argv[2] == 'bert-joint' or sys.argv[2] == 'bert-granu' or sys.argv[2] == 'mgn':
+        print("Iam Here")
+        print(sys.argv[1])
         fi = convert(ids, texts, 1, flat_texts, sys.argv[1])
-
+    print("FI:", fi)
     res = remove_duplicates(fi)
+    print("RES:", res)
+    wait = input("Press Enter to continue.")
 
-    with open("./eval/official_prediction.txt", 'w') as f3:
+    with open("./eval/official_prediction{0}.txt".format(timestr), 'w', encoding="utf-8") as f3:
         for i in res:
             f3.write("\t".join([i[0], i[1], str(i[2]), str(i[3])])+"\n")
 

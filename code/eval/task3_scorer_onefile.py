@@ -61,7 +61,7 @@ def check_data_file_lists(submission_annotations, gold_annotations, task_name="t
 
 def load_technique_names_from_file(filename=TECHNIQUE_NAMES_FILE):
 
-    with open(filename, "r") as f:
+    with open(filename, "r", encoding='utf-8') as f:
         return [ line.rstrip() for line in f.readlines() ]
 
 
@@ -234,7 +234,7 @@ def check_article_annotations_format(submission_article_annotations, article_id,
 
 def read_task3_output_file(filename):
 
-    with open(filename, "r") as f:
+    with open(filename, "r", encoding='utf-8') as f:
         return [ line.rstrip().split("\t") for line in f.readlines() ]
 
 
@@ -435,7 +435,7 @@ def load_annotation_list_from_folder(folder_name, techniques_names):
     annotations = {}
     for filename in file_list:
         annotations[extract_article_id_from_file_name(filename)] = []
-        with open(filename, "r") as f:
+        with open(filename, "r", encoding='utf-8') as f:
             for row_number, line in enumerate(f.readlines()):
                 row = line.rstrip().split("\t")
                 check_format_of_annotation_in_file(row, row_number, techniques_names, filename)

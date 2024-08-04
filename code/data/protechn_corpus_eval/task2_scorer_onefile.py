@@ -87,7 +87,7 @@ def load_sentence_labels_from_file(filename):
 
     annotations = {}
     is_template_submission = False
-    with open(filename, "r") as f:
+    with open(filename, "r", encoding='utf-8') as f:
         for i, line in enumerate(f.readlines()):
             row = line.rstrip().split("\t")
             if row[TASK_2_ARTICLE_ID_COL] not in annotations.keys():
