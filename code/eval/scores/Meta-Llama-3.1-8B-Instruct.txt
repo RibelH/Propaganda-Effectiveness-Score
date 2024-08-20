@@ -1,3 +1,0 @@
-Total Weighted PT Density:     0.0914777659956992
-Total Unweighted PT Density:   0.6328871988531779
-Technique Diversity:           0.78
