@@ -1,0 +1,10 @@
++-------------------PTD with article length---------------------+
+Total Weighted PT Density:     0.2361248746454546
+Total Unweighted PT Density:   1.0045604789651597
+Technique Diversity:           0.78
+
++-------------------PTD with token count---------------------+
+Total Weighted PT Density:     0.1896113890867438
+Total Unweighted PT Density:   0.877885292580712
+Technique Diversity:           0.78
+
