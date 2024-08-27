@@ -1,0 +1,7 @@
++----------------------------PS-----------------------------+
+APD:                       0.0115
+PTD:                       0.7222
+Normalized APD:            0.0115
+Normalized PTD:            0.0115
+Total Propaganda Score:    0.6697
+
