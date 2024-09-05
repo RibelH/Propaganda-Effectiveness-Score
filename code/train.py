@@ -100,7 +100,7 @@ def eval(model, iterator, f, criterion, binary_criterion):
                 Y_hats[i].extend(y_hats[i].cpu().numpy().tolist())
     valid_loss = np.average(valid_losses)
 
-    with open(f, 'w', encoding='utf-16') as fout:
+    with open(f, 'w', encoding='utf-8') as fout:
         y_hats, preds = [[] for _ in range(num_task)], [[] for _ in range(num_task)]
         if num_task == 1:
             for words, is_heads, tags[0], y_hats[0] in zip(Words, Is_heads, *Tags, *Y_hats):
@@ -122,7 +122,8 @@ def eval(model, iterator, f, criterion, binary_criterion):
                 y_hats[0] = [hat for head, hat in zip(is_heads, y_hats[0]) if head == 1]
                 preds[0] = [idx2tag[0][hat] for hat in y_hats[0]]
                 preds[1] = idx2tag[1][y_hats[1]]
-               
+                #print(idx2tag)
+                #wait = input("Press Enter to continue.")
                 if tags[1].split()[1:-1][0] == 'Non-prop' and preds[1] == 'Non-prop':
                     true_neg += 1
                 elif tags[1].split()[1:-1][0] == 'Non-prop' and preds[1] == 'Prop':
@@ -136,6 +137,7 @@ def eval(model, iterator, f, criterion, binary_criterion):
                 fout.write("\n")
                 for w, t1, p_1 in zip(words.split()[2:-1], tags[0].split()[1:-1], preds[0][1:-1]):
                     fout.write("{} {} {} {} {}\n".format(w,t1,tags[1].split()[1:-1][0],p_1,preds[1]))
+                    #print("{} {} {} {} {}\n".format(w,t1,tags[1].split()[1:-1][0],p_1,preds[1]))
                 fout.write("\n")
             try:
                 precision = true_pos / (true_pos + false_pos)
@@ -160,8 +162,8 @@ def eval(model, iterator, f, criterion, binary_criterion):
     ## calc metric 
     y_true, y_pred = [], []
     for i in range(num_task):
-        y_true.append(np.array([tag2idx[i][line.split()[i+1]] for line in open(f, 'r', encoding='utf-16').read().splitlines() if len(line.split()) > 1]))
-        y_pred.append(np.array([tag2idx[i][line.split()[i+1+num_task]] for line in open(f, 'r', encoding='utf-16').read().splitlines() if len(line.split()) > 1]))
+        y_true.append(np.array([tag2idx[i][line.split()[i+1]] for line in open(f, 'r', encoding='utf-8').read().splitlines() if len(line.split()) > 1]))
+        y_pred.append(np.array([tag2idx[i][line.split()[i+1+num_task]] for line in open(f, 'r', encoding='utf-8').read().splitlines() if len(line.split()) > 1]))
     
     num_predicted, num_correct, num_gold = 0, 0, 0
     if num_task != 2:
@@ -196,8 +198,8 @@ def eval(model, iterator, f, criterion, binary_criterion):
             f1=0
 
     final = f + ".P%.4f_R%.4f_F1%.4f" %(precision, recall, f1)
-    with open(final, 'w', encoding='utf-16') as fout:
-        result = open(f, "r").read()
+    with open(final, 'w', encoding='utf-8') as fout:
+        result = open(f, "r", encoding="utf-8").read()
         fout.write("{}\n".format(result))
 
         fout.write("precision={:4f}\n".format(precision))
@@ -295,14 +297,3 @@ if __name__=="__main__":
                  f'test_recall: {recall:.5f} ' +
                  f'test_f1: {f1:.5f}')
     print(print_msg)
-
-
-def test_model():
-    model = BertMultiTaskLearning.from_pretrained('bert-base-cased')
-    model.load_state_dict(torch.load(os.path.join('checkpoints', timestr+".pt")))
-
-    test_iter = data.DataLoader(dataset=test_set,
-                                batch_size=hp.batch_size,
-                                shuffle=False,
-                                num_workers=1,
-                                collate_fn=pad)

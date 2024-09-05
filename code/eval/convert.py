@@ -1,9 +1,11 @@
-import pdb
-from pathlib import Path
-import pathlib 
-import re
-import sys
+import time
+import pathlib
 from operator import itemgetter
+
+import sys
+import io
+sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8')
+timestr = time.strftime("%Y%m%d-%H%M%S")
 
 def read_data(directory):
     ids = []
@@ -11,7 +13,8 @@ def read_data(directory):
     for f in directory.glob('*.txt'):
         id = f.name.replace('article', '').replace('.txt','')
         ids.append(id)
-        texts.append(f.read_text())
+        texts.append(f.read_text(encoding="utf8"))
+
     return ids, texts
 
 def clean_text(articles, ids):
@@ -60,8 +63,9 @@ def remove_duplicates(res):
     return ans
 
 
-def convert(ids, texts, ind, flat_texts, filename):
-    with open(filename, 'r') as f1:
+def convert(ind, flat_texts, filename):
+
+    with open(filename, 'r', encoding='utf-8') as f1:  # Open in binary mode
         output = []
         for line in f1:
             if len(line.split()) == 1: # if line is id 
@@ -76,12 +80,10 @@ def convert(ids, texts, ind, flat_texts, filename):
                 output.append(tmp + [len(tmp[1])]) # add word length to line
             else: 
                 output.append('\n')
-
     res = []
     aid = output[0][0]
     sub_list = [sentence for sentence in flat_texts if sentence[0] == aid]
     sub_dic = {sentence:(start, end) for _, sentence, start, end in sub_list}
-
 
     start = 0 
     end = -1 
@@ -91,55 +93,71 @@ def convert(ids, texts, ind, flat_texts, filename):
 
     tmp_ans = []
     cur_tag = 'O'
+    num_words = 0
     for line in output:
         if line != '\n':
             aid = line[0]
             sentence += line[1] + " "
             if line[-2] != 'O' and line[-2] != '<PAD>':
                 if on == 0:
+                    num_words = 1
                     on = 1
                     cur_tag = line[-2]
                     start = cur
                     end = cur + line[-1]
                 elif line[-2] == cur_tag:
+                    num_words += 1
                     end = cur + line[-1] 
                 elif line[-2] != cur_tag:
-                    tmp_ans.append([aid, cur_tag, start, end])
+                    tmp_ans.append([aid, cur_tag, start, end, num_words])
+                    num_words = 1
                     cur_tag = line[-2]
                     start = cur
                     end = cur + line[-1]
             else:
                 if on:
-                    tmp_ans.append([aid, cur_tag, start, end])
+                    tmp_ans.append([aid, cur_tag, start, end, num_words])
+                    num_words = 0
                     on = 0
             cur += line[-1] + 1
             
         else: 
             if on: 
-                tmp_ans.append([aid, cur_tag, start, end])
+                tmp_ans.append([aid, cur_tag, start, end, num_words])
+                num_words  = 0
                 on = 0
 
             cur = 0
             sub_list = [sentence for sentence in flat_texts if sentence[0] == aid]
-            sub_dic = {sentence:(start, end) for _, sentence, start, end in sub_list}
-
+            print("SUB:", sub_list)
+            sub_dic = {" ".join(sentence.split()):(start, end) for _, sentence, start, end in sub_list}
+            print("SUB_DIC:", sub_dic)
+            print(tmp_ans)
             if len(tmp_ans) and sentence[:-1] != "":
-                s, e = sub_dic.get(sentence[:-1])
+                try:
+                    s, e = sub_dic.get(sentence[:-1])
+                except Exception as error:
+                    print('SUB_DIC:', sub_dic)
+                    print('TMP_ANS',tmp_ans)
+                    print('on line:', line)
+                    print('SETNENCE:',sentence[:-1])
+                    print('ERROR:', error)
+                    wait = input("Press Enter to continue.")
                 for ans in tmp_ans:
                     ans[2] += s
                     ans[3] += s 
                     res.append(ans)
             sentence = ""
             tmp_ans = []
-    return res 
+    return res
 
 
 
 if __name__ == "__main__":
 
-    directory = pathlib.Path('./data/protechn_corpus_eval/test')
+    directory = pathlib.Path('./data/protechn_corpus_eval/{0}'.format(sys.argv[3]))
     ids, texts = read_data(directory)
-    
+
     t_texts = clean_text(texts, ids)
     flat_texts = [sentence for article in t_texts for sentence in article]
 
@@ -153,9 +171,9 @@ if __name__ == "__main__":
 
     res = remove_duplicates(fi)
 
-    with open("./eval/official_prediction.txt", 'w') as f3:
+    with open("./eval/official_prediction{0}.txt".format(timestr), 'w', encoding="utf-8") as f3:
         for i in res:
-            f3.write("\t".join([i[0], i[1], str(i[2]), str(i[3])])+"\n")
+            f3.write("\t".join([i[0], i[1], str(i[2]), str(i[3]), str(i[4])])+"\n")
 
 
    
