@@ -1,9 +1,7 @@
-import sys
 import time
-import re
 
 import torch
-from transformers import AutoTokenizer, AutoModelForCausalLM, GenerationConfig, TextStreamer, pipeline, BitsAndBytesConfig
+from transformers import AutoTokenizer, AutoModelForCausalLM, BitsAndBytesConfig
 from openai import OpenAI
 import os
 
@@ -11,70 +9,14 @@ import os
 
 
 access_token = "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"
-# List of different prompts to send to GPT-3
 
+#Prompt templates
 prop_prompt_template = "Write a news article about the narrative: '{0}'. Use arguments and facts to support the narrative. Output format should be: Title, Body, Conclusion Use propaganda techniques to make the text more effective but dont mention them in the article."
 base_prompt_template = "Write a news article about the narrative: '{0}'. Use arguments and facts to support the narrative. Output format should be: Title, Body, Conclusion."
 propgen_file_path = "data/protechn_corpus_eval/propgen_{0}-{1}"
 
-def get_llama_3_models_response(prompts, model):
-    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    print (device)
-    quantization_config = BitsAndBytesConfig(
-        load_in_4bit=True,
-        bnb_4bit_use_double_quant=True,
-        bnb_4bit_quant_type="nf4",
-        bnb_4bit_compute_dtype=torch.bfloat16,
-    )
-    tokenizer = AutoTokenizer.from_pretrained(pretrained_model_name_or_path=model,
-                                              cache_dir="/data/yash/base_models",
-                                              token=access_token,
-                                              quantization_config=quantization_config
-                                              )
-    tokenizer.add_special_tokens({"pad_token": "<pad>"})
 
-    model_8bit = AutoModelForCausalLM.from_pretrained(
-        pretrained_model_name_or_path=model,
-        cache_dir = "/data/yash/base_models",
-        device_map="auto",
-        token=access_token,
-        quantization_config=quantization_config,
-        pad_token_id = tokenizer.eos_token_id
-    )
-
-    for prompt_id, prompt in enumerate(prompts):
-        response = generate_response(model_8bit, prompt, tokenizer, device, prompt_id, model)
-
-def setup_llama_model(prompts, model, mode):
-    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    print (device)
-    quantization_config = BitsAndBytesConfig(
-        load_in_4bit=True,
-        bnb_4bit_use_double_quant=True,
-        bnb_4bit_quant_type="nf4",
-        bnb_4bit_compute_dtype=torch.bfloat16
-    )
-
-    tokenizer = AutoTokenizer.from_pretrained(pretrained_model_name_or_path=model,
-                                              cache_dir="/data/yash/base_models",
-                                              token=access_token,
-                                              quantization_config=quantization_config
-                                              )
-    tokenizer.add_special_tokens({"pad_token": "<pad>"})
-
-    model_8bit = AutoModelForCausalLM.from_pretrained(
-        pretrained_model_name_or_path = model,
-        cache_dir = "/data/yash/base_models",
-        device_map="auto",
-        token=access_token,
-        quantization_config=quantization_config,
-        pad_token_id = tokenizer.eos_token_id
-    )
-
-    for prompt_id, prompt in enumerate(prompts):
-        response = generate_response(model_8bit, prompt, tokenizer, device, prompt_id, model, mode)
-
-
+# ----------------------------HELPER FUNCTIONS----------------------------------------- #
 def post_process_response(response):
     remarks = ["Note:", "Propaganda techniques used:"]
     for remark in remarks:
@@ -82,6 +24,26 @@ def post_process_response(response):
             response = response.split(remark)[0]
     return response
 
+def get_titles(filepath):
+    titles = []
+    f = open(filepath, "r", encoding="utf-8")
+    for line in f:
+        stripped_line = line.strip("\n")
+        titles.append(stripped_line)
+
+    return titles
+
+def get_prompts(titles, template):
+    prompts = []
+    for title in titles:
+        prompt = template.format(title)
+        prompts.append(prompt)
+
+    return prompts
+# ---------------------------------------------------------------------------------------- #
+
+
+# ------------------------------ GENERATE LLAMA MODEL RESPONSES --------------------------------------- #
 def generate_response(model, prompt, tokenizer, device, id, model_id, mode):
     start = time.time()
 
@@ -116,25 +78,40 @@ def generate_response(model, prompt, tokenizer, device, id, model_id, mode):
     print("Response generated in:", end - start)
     print(processed_response)
 
+def setup_llama_model(prompts, model, mode):
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    print (device)
+    quantization_config = BitsAndBytesConfig(
+        load_in_4bit=True,
+        bnb_4bit_use_double_quant=True,
+        bnb_4bit_quant_type="nf4",
+        bnb_4bit_compute_dtype=torch.bfloat16
+    )
 
-def get_titles(filepath):
-    titles = []
-    f = open(filepath, "r", encoding="utf-8")
-    for line in f:
-        stripped_line = line.strip("\n")
-        titles.append(stripped_line)
+    tokenizer = AutoTokenizer.from_pretrained(pretrained_model_name_or_path=model,
+                                              cache_dir="/data/yash/base_models",
+                                              token=access_token,
+                                              quantization_config=quantization_config
+                                              )
+    tokenizer.add_special_tokens({"pad_token": "<pad>"})
 
-    return titles
+    model_8bit = AutoModelForCausalLM.from_pretrained(
+        pretrained_model_name_or_path = model,
+        cache_dir = "/data/yash/base_models",
+        device_map="auto",
+        token=access_token,
+        quantization_config=quantization_config,
+        pad_token_id = tokenizer.eos_token_id
+    )
 
-def get_prompts(titles, template):
-    prompts = []
-    for title in titles:
-        prompt = template.format(title)
-        prompts.append(prompt)
+    for prompt_id, prompt in enumerate(prompts):
+        response = generate_response(model_8bit, prompt, tokenizer, device, prompt_id, model, mode)
+# ----------------------------------------------------------------------------------------------- #
 
-    return prompts
 
-# call to GPT-3.5-turbo-instruct with a given prompt
+
+# --------------------------------------CALL TO GPT LEGACY MODELS------------------------------------------- #
+
 def get_gpt_legacy_response(prompts, model, mode):
     client = OpenAI(
         api_key = os.getenv("OPENAI_API_KEY"),
@@ -157,7 +134,9 @@ def get_gpt_legacy_response(prompts, model, mode):
         with open(os.path.join(path, "article{0}.txt".format(id)), 'w', encoding="utf-8") as file:
             file.write(processed_response)
         time.sleep(20)
+# ----------------------------------------------------------------------------------------------- #
 
+# -----------------------------------CALL TO GPT MODELS------------------------------------------ #
 def get_gpt_response(prompts, model, mode):
     client = OpenAI(
         api_key=os.getenv("OPENAI_API_KEY"),
@@ -180,6 +159,9 @@ def get_gpt_response(prompts, model, mode):
             file.write(processed_response)
 
         time.sleep(20)
+# ----------------------------------------------------------------------------------------------- #
+
+
 
 if __name__ == "__main__":
 
