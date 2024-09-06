@@ -5,7 +5,7 @@ from torch.utils import data
 import os
 from hp import hp
 from model import BertMultiTaskLearning
-from data_load import PropDataset, pad, idx2tag, num_task, masking
+from data_load import PropDataset, pad, idx2tag, num_task
 import time
 from collections import OrderedDict
 
