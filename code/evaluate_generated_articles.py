@@ -24,10 +24,10 @@ def propgen_eval(model, iterator, f):
         for _, batch in enumerate(iterator):
             words, x, is_heads, att_mask, tags, y, seqlens = batch
             att_mask = torch.Tensor(att_mask)
-            logits, y_hats = model(x, attention_mask=att_mask)  # logits: (N, T, VOCAB), y: (N, T)
+            logits, y_hats = model(x, attention_mask=att_mask)
 
             for i in range(num_task):
-                logits[i] = logits[i].view(-1, logits[i].shape[-1])  # (N*T, 2)
+                logits[i] = logits[i].view(-1, logits[i].shape[-1])
 
             Words.extend(words)
             Is_heads.extend(is_heads)

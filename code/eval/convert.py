@@ -129,19 +129,12 @@ def convert(ids, texts, ind, flat_texts, filename):
 
             cur = 0
             sub_list = [sentence for sentence in flat_texts if sentence[0] == aid]
-            print("SUB:", sub_list)
             sub_dic = {" ".join(sentence.split()):(start, end) for _, sentence, start, end in sub_list}
-            print("SUB_DIC:", sub_dic)
-            print(tmp_ans)
+
             if len(tmp_ans) and sentence[:-1] != "":
                 try:
                     s, e = sub_dic.get(sentence[:-1])
                 except Exception as error:
-                    print('SUB_DIC:', sub_dic)
-                    print('TMP_ANS',tmp_ans)
-                    print('on line:', line)
-                    print('SETNENCE:',sentence[:-1])
-                    print('ERROR:', error)
                     wait = input("Press Enter to continue.")
                 for ans in tmp_ans:
                     ans[2] += s
