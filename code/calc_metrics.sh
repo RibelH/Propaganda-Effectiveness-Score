@@ -1,0 +1,1 @@
+python ./calc_metrics.py $1 $2 $3

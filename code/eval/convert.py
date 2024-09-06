@@ -63,7 +63,7 @@ def remove_duplicates(res):
     return ans
 
 
-def convert(ind, flat_texts, filename):
+def convert(ids, texts, ind, flat_texts, filename):
 
     with open(filename, 'r', encoding='utf-8') as f1:  # Open in binary mode
         output = []

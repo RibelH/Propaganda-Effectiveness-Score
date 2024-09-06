@@ -1,3 +1,4 @@
+import sys
 import time
 import re
 
@@ -134,7 +135,7 @@ def get_prompts(titles, template):
     return prompts
 
 # call to GPT-3.5-turbo-instruct with a given prompt
-def get_gpt_3_dot_5_response(prompts, model, mode):
+def get_gpt_legacy_response(prompts, model, mode):
     client = OpenAI(
         api_key = os.getenv("OPENAI_API_KEY"),
     )
@@ -157,7 +158,7 @@ def get_gpt_3_dot_5_response(prompts, model, mode):
             file.write(processed_response)
         time.sleep(20)
 
-def get_gpt_4o_mini_response(prompts, model, mode):
+def get_gpt_response(prompts, model, mode):
     client = OpenAI(
         api_key=os.getenv("OPENAI_API_KEY"),
     )
@@ -180,43 +181,47 @@ def get_gpt_4o_mini_response(prompts, model, mode):
 
         time.sleep(20)
 
-def print_prompt_response(prompts, models):
-    for model in models:
-        for id, prompt in enumerate(prompts):
-            match model:
-                case 'gpt-4o-mini':
-                    response = get_gpt_4o_mini_response(prompt, id, model)
-                    print(f"Prompt: {prompt}\nResponse: {response}\n")
-                case 'gpt-3.5-turbo-instruct':
-                    response = get_gpt_3_dot_5_response(prompt, id, model)
-                    print(f"Prompt: {prompt}\nResponse: {response}\n")
-                case 'meta-llama/Llama-2-7b-chat-hf':
-                    response = setup_llama_model(prompt, model)
-                    print(f"Prompt: {prompt}\nResponse: {response}\n")
-
 if __name__ == "__main__":
+
+    #### SPECIFY HERE YOUR MODEL
+    model = "[MODEL NAME]"
+
+    ### SPECIFY HERE YOUR MODE "base" OR "prop" for the different templates
+    mode = "[MODE]"
+    prompts = []
+
+
     file_path = "article_titles.txt"
     test_file_path = "test_articles.txt"
-    models = ['gpt-4-turbo', 'gpt-4o-mini', 'gpt-4o' ,'gpt-3.5-turbo']
-    models_gpt_3 = ['gpt-3.5-turbo-instruct']
+    gpt_models = ['gpt-4-turbo', 'gpt-4o-mini', 'gpt-4o' ,'gpt-3.5-turbo']
+    legacy_gpt_models = ['gpt-3.5-turbo-instruct']
+    llama_models = ['meta-llama/Meta-Llama-3.1-8B-Instruct', 'meta-llama/Meta-Llama-3-8B-Instruct', 'meta-llama/Llama-2-7b-chat-hf']
     titles = get_titles(file_path)
     test_titles = get_titles(test_file_path)
+
+    if "test" in mode:
+        titles = test_titles
+
+
     prop_prompts = get_prompts(test_titles, prop_prompt_template)
     base_prompts = get_prompts(test_titles, base_prompt_template)
 
-    #setup_llama_model(prop_prompts, "meta-llama/Llama-2-7b-chat-hf", 'prop-test')
-    setup_llama_model(prop_prompts, "meta-llama/Meta-Llama-3.1-8B-Instruct", 'prop-test')
-    # for model in [models]:
-    #     get_gpt_4o_mini_response(prop_prompts, model, 'prop-test')
-    #     get_gpt_4o_mini_response(base_prompts, model, 'base-test')
-    #
-    # for model in models_gpt_3:
-    #     get_gpt_3_dot_5_response(prop_prompts, model, 'prop-test')
-    #     get_gpt_3_dot_5_response(base_prompts, model, 'base-test')
+    if "prop" in mode:
+        prompts = prop_prompts
+    elif "base" in mode:
+        prompts = base_prompts
 
+    if "test" in mode:
+        titles = test_titles
 
-    #get_gpt_4o_mini_response(prompts, "gpt-4-turbo")
-    #get_gpt_4o_mini_response(prop_prompts, 'gpt-4o-mini', 'prop')
-    #get_gpt_4o_mini_response(base_prompts, 'gpt-4o-mini', 'base')
+    if model in llama_models:
+        setup_llama_model(prop_prompts, model, mode)
+
+    if model in gpt_models:
+        get_gpt_response(prop_prompts, model, mode)
+
+    if model in legacy_gpt_models:
+        get_gpt_legacy_response(prop_prompts, model, mode)
+
 
 

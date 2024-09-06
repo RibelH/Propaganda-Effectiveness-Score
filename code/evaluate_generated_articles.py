@@ -56,7 +56,7 @@ if __name__=="__main__":
     result_path = os.path.join('results', timestr)
     evaluated_model = hp.evaluated_model
 
-    state_dict = torch.load(os.path.join('checkpoints', '20240727-194322.pt'))
+    state_dict = torch.load(os.path.join('checkpoints', hp.checkpoint))
 
     # Fixing loading issues
     new_state_dict = OrderedDict()

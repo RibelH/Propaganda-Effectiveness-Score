@@ -1,0 +1,1 @@
+python ./generate_articles.py $1 $2
