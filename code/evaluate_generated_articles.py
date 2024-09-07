@@ -54,7 +54,7 @@ if __name__=="__main__":
     model = BertMultiTaskLearning.from_pretrained('bert-base-cased')
 
     result_path = os.path.join('results', timestr)
-    evaluated_model = hp.evaluated_model
+    article_folder = hp.evaluated_model
 
     state_dict = torch.load(os.path.join('checkpoints', hp.checkpoint))
 
@@ -68,7 +68,7 @@ if __name__=="__main__":
         new_state_dict[k] = v
     model.load_state_dict(new_state_dict)
 
-    propgen_dataset = PropDataset(hp.propgenset.format(evaluated_model), True)
+    propgen_dataset = PropDataset(hp.propgenset.format(article_folder), True)
     propgen_iter = data.DataLoader(dataset=propgen_dataset,
                                 batch_size=hp.batch_size,
                                 shuffle=False,
