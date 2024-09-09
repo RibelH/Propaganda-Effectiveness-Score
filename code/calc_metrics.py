@@ -1,3 +1,4 @@
+import json
 import os
 import sys
 
@@ -101,6 +102,7 @@ def calc_average_prop_den(ids, annotations, word_counts, weights):
 
     for id in ids:
         article_pd = calc_article_prop_den(word_counts[id], weights, annotations[id])
+
         total_pd = total_pd + article_pd
 
 
@@ -108,6 +110,8 @@ def calc_average_prop_den(ids, annotations, word_counts, weights):
     article_pds.update({'total': apd})
 
     return apd
+
+
 
 # ------------------------------------------------------------------------------------------------------------------------- #
 
@@ -149,17 +153,32 @@ def run_calculations(folder_path, weights, model, pred_file, mode):
     word_counts = get_word_count_of_articles(folder_path)
     pre_process = pre_process_annotations(pred_file)
     annotations = annotations_to_dic(pre_process)
-    article_ids = annotations.keys()
-    accuracy_dic = {"TP": 0, "TN": 0, "FP": 0, "FN": 0}
+    article_ids = list(word_counts.keys())
+    pes_scores = {}
+
+    # print(folder_path)
+    # print("Weights: ",weights)
+    # print("Word Counts: ", word_counts)
+    # print("annotations: ", annotations)
+    #wait = input("Press Enter to continue.")
 
     #Average Propaganda Density
-    apd, pd_scores = calc_average_prop_den(article_ids, annotations, word_counts, weights)
+    #apd, pd_scores = calc_average_prop_den(article_ids, annotations, word_counts, weights)
 
     #Propaganda Technique Diversity
-    ptd, ptd_scores = calc_prop_tech_diversity(article_ids, len(word_counts), len(weights.keys()), annotations)
+    #ptd, ptd_scores = calc_prop_tech_diversity(article_ids, len(word_counts), len(weights.keys()), annotations)
+
+    #Average Propaganda Density
+    apd, pd_scores = calc_average_prop_den_test(article_ids, annotations, word_counts, weights)
+
+    #Propaganda Technique Diversity
+    ptd, ptd_scores = calc_prop_tech_diversity_test(article_ids, len(weights.keys()), annotations)
 
     #Normalize APD & PTD values to a range of 0-10
     norm_apd, norm_ptd = normalize_score_0_to_10(apd, ptd, max(weights.values()))
+
+
+
 
     #Total Propaganda Score
     total_count_propaganda_score = get_propaganda_effectiveness_score(norm_apd, norm_ptd)
@@ -170,13 +189,17 @@ def run_calculations(folder_path, weights, model, pred_file, mode):
     if len(model.split("/")) > 1:
         model = model.split("/")[-1]
 
+    for article_id in article_ids:
+        norm_pd, norm_article_ptd = normalize_score_0_to_10(pd_scores[article_id], ptd_scores[article_id], max(weights.values()))
+        pes = get_propaganda_effectiveness_score(norm_pd, norm_article_ptd)
+        pes_scores.update({article_id: round(pes, 4)})
 
 
     with open("eval/{folder}_scores/{filename}.txt".format(folder = mode, filename= model), "w", encoding="utf8") as f:
         f.write("Normalized APD:            {0:.4f}\n".format(norm_apd))
         f.write("Normalized PTD:            {0:.4f}\n".format(norm_ptd))
-        f.write("PES:                       {0:.4f}\n\n".format(total_count_propaganda_score))
-
+        f.write("PES:                       {0:.4f}\n".format(total_count_propaganda_score))
+        f.write("PES articles: {0}".format(json.dumps(pes_scores)))
     return total_count_propaganda_score, norm_apd, norm_ptd
 # --------------------------------------------------------------------------------------------------------------------- #
 
@@ -262,7 +285,7 @@ def run_calculations_for_threshold(folder_path, weights, model, pred_file, mode,
         norm_pd, norm_article_ptd = normalize_score_0_to_10(pd_scores[article_id], ptd_scores[article_id], max(weights.values()))
         ps = get_propaganda_effectiveness_score(norm_pd, norm_article_ptd)
         accuracy_dic = update_accuracy_dictionary(accuracy_dic, mode, threshold, ps)
-        ps_scores.update({article_id: ps})
+        ps_scores.update({article_id: round(ps, 4)})
 
 
     #Total Propaganda Score
@@ -272,18 +295,18 @@ def run_calculations_for_threshold(folder_path, weights, model, pred_file, mode,
     return total_count_propaganda_score, accuracy_dic
 
 
-def get_performance_metrics(final_accuracy_dic):
+def get_performance_metrics(accuracy_dic):
     #Accuracy
-    accuracy = (final_accuracy_dic["TP"] + final_accuracy_dic["TN"]) / sum(final_accuracy_dic.values())
+    accuracy = (accuracy_dic["TP"] + accuracy_dic["TN"]) / sum(accuracy_dic.values())
 
     #Precision
-    precision = final_accuracy_dic["TP"] / (final_accuracy_dic["TP"] + final_accuracy_dic["FP"])
+    precision = accuracy_dic["TP"] / (accuracy_dic["TP"] + accuracy_dic["FP"])
 
     #Recall
-    recall = final_accuracy_dic["TP"] / (final_accuracy_dic["TP"] + final_accuracy_dic["FN"])
+    recall = accuracy_dic["TP"] / (accuracy_dic["TP"] + accuracy_dic["FN"])
 
     #F1-Score
-    f1 = (2 * final_accuracy_dic["TP"]) / ((2 * final_accuracy_dic["TP"]) + final_accuracy_dic["FP"] + final_accuracy_dic["FN"])
+    f1 = (2 * accuracy_dic["TP"]) / ((2 * accuracy_dic["TP"]) + accuracy_dic["FP"] + accuracy_dic["FN"])
 
     return accuracy, precision, recall, f1
 
@@ -301,8 +324,6 @@ if __name__ == "__main__":
     mode = sys.argv[3]
 
     weights = get_technique_weights(train_folder)
-    print(weights)
-    wait = input("Press Enter to continue.")
 
     ps, apd, ptd = run_calculations(article_folder_path, weights, article_folder, prediction_file_path, mode)
 
