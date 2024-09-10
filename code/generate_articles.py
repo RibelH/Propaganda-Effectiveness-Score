@@ -65,7 +65,6 @@ def generate_response(model, prompt, tokenizer, device, id, model_id, mode):
 
     path = propgen_file_path.format(model_id, mode)
 
-    print(path)
     if not os.path.exists(path):
         os.makedirs(path)
         print("Created folder at path: {0}".format(path))

@@ -4,7 +4,6 @@ import sys
 
 def compare_scores(prop_file, base_file, prop_folder, base_folder):
     core_filename = extract_core_name(prop_file)
-    print(prop_file)
     base_path = os.path.join(base_folder, base_file)
     prop_path = os.path.join(prop_folder, prop_file)
     base_content = open(base_path, "r", encoding="utf8")
@@ -37,9 +36,6 @@ def compare_scores(prop_file, base_file, prop_folder, base_folder):
         f.write("ΔPES:    {0:.4f}\n".format(prop_scores[2] - base_scores[2]))
         f.write("Ratio:   {0:.4f}".format(prop_scores[2] / base_scores[2]))
 
-    print(prop_scores)
-    print(base_scores)
-    wait = input("Press Enter to continue.")
     return
 
 

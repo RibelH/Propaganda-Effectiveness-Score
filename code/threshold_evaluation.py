@@ -1,7 +1,6 @@
 import json
 import os
 import sys
-from calc_metrics import run_calculations_for_threshold
 
 def update_performance_dictionary(performance_dic, mode, threshold, ps):
     if mode == "base":
@@ -83,23 +82,29 @@ if __name__ == "__main__":
 
     performance_dic = {"TP": 0, "TN": 0, "FP": 0, "FN": 0}
 
+    #Score folder paths
     prop_score_folder = os.path.join("eval", sys.argv[1])
     base_score_folder = os.path.join("eval", sys.argv[2])
+
+    #Threshold to be evaluated
     threshold = float(sys.argv[3])
+
+    #Determine evaluation mode (model or article)
     try:
         article_mode = bool(sys.argv[4])
     except:
         article_mode = False
+
+    #List of score files
     prop_score_files = os.listdir(prop_score_folder)
     base_score_files = os.listdir(base_score_folder)
 
     #Bring lists into same order
     file_reorder = {extract_core_name(file): file for file in base_score_files}
-    # print(file_reorder)
-    # wait = input("Press Enter to continue.")
 
     base_score_files = [file_reorder[extract_core_name(filename)] for filename in prop_score_files]
 
+    #Update Accuracy Dictionary based on score files
     for psf, bsf in zip(prop_score_files, base_score_files):
         if article_mode:
             base_pes_scores, prop_pes_scores = article_threshold_eval(psf, bsf, prop_score_folder, base_score_folder)
@@ -112,11 +117,9 @@ if __name__ == "__main__":
             performance_dic = update_performance_dictionary(performance_dic, "base", threshold, base_pes)
             performance_dic = update_performance_dictionary(performance_dic, "prop", threshold, prop_pes)
 
-
-    # print(performance_dic)
-    # print("I AM HERE!")
-    # wait = input("Press Enter to continue.")
     metric_dic = get_performance_metrics(performance_dic)
+
+    #Write performance scores into file
     if article_mode:
         if not os.path.exists('eval/threshold_performance_article'):
             os.makedirs('eval/threshold_performance_article')
