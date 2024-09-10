@@ -98,18 +98,17 @@ def calc_article_prop_den(article_word_count, weights, article_annotations):
 
 def calc_average_prop_den(ids, annotations, word_counts, weights):
     article_pds = {}
-    total_pd = 0
+    num_articles = len(word_counts.keys())
 
     for id in ids:
-        article_pd = calc_article_prop_den(word_counts[id], weights, annotations[id])
+        #Handle case where an article has no annotation
+        try:
+            article_pds.update({id: calc_article_prop_den(word_counts[id], weights, annotations[id])})
+        except:
+            article_pds.update({id: calc_article_prop_den(word_counts[id], weights, [])})
 
-        total_pd = total_pd + article_pd
-
-
-    apd = total_pd/len(word_counts.keys())
-    article_pds.update({'total': apd})
-
-    return apd
+    apd = sum(article_pds.values())/num_articles
+    return apd, article_pds
 
 
 
@@ -117,21 +116,29 @@ def calc_average_prop_den(ids, annotations, word_counts, weights):
 
 # -------------------------------------- CALCULATE PROPAGANDA TECHNIQUE DIVERSITY ----------------------------------------- #
 
-def calc_prop_tech_diversity(ids, num_articles,num_total_techniques, annotations):
+def calc_prop_tech_diversity(ids, num_total_techniques, annotations):
     used_techniques = {}
-    total = 0
+    ptd_scores = {}
+    num_articles = len(ids)
+
     for id in ids:
+        #Initialize dictionary value
+        if id not in ptd_scores:
+            ptd_scores.update({id: 0})
+        #Handle case where an article has no annotations
+        if id not in annotations.keys():
+            continue
+        #Collect unique techniques per article
         for annotation in annotations[id]:
             t = annotation["technique"]
-            if id not in used_techniques:
-                used_techniques[id] = []
+            used_techniques[id] = []
             if t not in used_techniques[id]:
                 used_techniques[id].append(t)
-        total += len(used_techniques[id])/num_total_techniques
 
-
-    ptd = round(total/num_articles, 4)
-    return ptd
+        ptd_scores.update({id: len(used_techniques[id])/num_total_techniques})
+    #Average ptd score
+    ptd = round(sum(ptd_scores.values())/num_articles, 4)
+    return ptd, ptd_scores
 # --------------------------------------------------------------------------------------------------------------------- #
 
 # ---------------------------CALCULATE PROPAGANDA EFFECTIVENESS SCORE-------------------------------------------------- #
@@ -156,23 +163,11 @@ def run_calculations(folder_path, weights, model, pred_file, mode):
     article_ids = list(word_counts.keys())
     pes_scores = {}
 
-    # print(folder_path)
-    # print("Weights: ",weights)
-    # print("Word Counts: ", word_counts)
-    # print("annotations: ", annotations)
-    #wait = input("Press Enter to continue.")
-
     #Average Propaganda Density
-    #apd, pd_scores = calc_average_prop_den(article_ids, annotations, word_counts, weights)
+    apd, pd_scores = calc_average_prop_den(article_ids, annotations, word_counts, weights)
 
     #Propaganda Technique Diversity
-    #ptd, ptd_scores = calc_prop_tech_diversity(article_ids, len(word_counts), len(weights.keys()), annotations)
-
-    #Average Propaganda Density
-    apd, pd_scores = calc_average_prop_den_test(article_ids, annotations, word_counts, weights)
-
-    #Propaganda Technique Diversity
-    ptd, ptd_scores = calc_prop_tech_diversity_test(article_ids, len(weights.keys()), annotations)
+    ptd, ptd_scores = calc_prop_tech_diversity(article_ids, len(weights.keys()), annotations)
 
     #Normalize APD & PTD values to a range of 0-10
     norm_apd, norm_ptd = normalize_score_0_to_10(apd, ptd, max(weights.values()))
@@ -199,116 +194,12 @@ def run_calculations(folder_path, weights, model, pred_file, mode):
         f.write("Normalized APD:            {0:.4f}\n".format(norm_apd))
         f.write("Normalized PTD:            {0:.4f}\n".format(norm_ptd))
         f.write("PES:                       {0:.4f}\n".format(total_count_propaganda_score))
-        f.write("PES articles: {0}".format(json.dumps(pes_scores)))
+
+        #Only add all PES scores for articles when test set is used for threshold evaluation
+        if "test" in mode:
+            f.write("PES articles: {0}".format(json.dumps(pes_scores)))
     return total_count_propaganda_score, norm_apd, norm_ptd
 # --------------------------------------------------------------------------------------------------------------------- #
-
-def calc_average_prop_den_test(ids, annotations, word_counts, weights):
-    article_pds = {}
-    total_pd = 0
-
-    for id in ids:
-        article_pd = 0
-        try:
-            article_pd = calc_article_prop_den(word_counts[id], weights, annotations[id])
-        except:
-            article_pd = calc_article_prop_den(word_counts[id], weights, [])
-        if id not in article_pds:
-            article_pds.update({id: article_pd})
-        total_pd = total_pd + article_pd
-
-
-    apd = total_pd/len(word_counts.keys())
-
-
-    article_pds.update({'total': apd})
-    return apd, article_pds
-
-
-def calc_prop_tech_diversity_test(ids, num_total_techniques, annotations):
-    used_techniques = {}
-    ptd_scores = {}
-    total = 0
-    for id in ids:
-        if id not in ptd_scores:
-            ptd_scores.update({id: 0})
-        if id not in annotations.keys():
-            continue
-        for annotation in annotations[id]:
-            t = annotation["technique"]
-            if id not in used_techniques:
-                used_techniques[id] = []
-            if t not in used_techniques[id]:
-                used_techniques[id].append(t)
-        total += len(used_techniques[id])/num_total_techniques
-        ptd_scores.update({id: len(used_techniques[id])/num_total_techniques})
-
-
-    ptd = round(total/len(ids), 4)
-    return ptd, ptd_scores
-
-def update_accuracy_dictionary(accuracy_dic, mode, threshold, ps):
-    if mode == "base":
-        if ps < threshold:
-            accuracy_dic["TN"] += 1
-        else:
-            accuracy_dic["FP"] += 1
-    else:
-        if ps < threshold:
-            accuracy_dic["FN"] += 1
-        else:
-            accuracy_dic["TP"] += 1
-
-    return accuracy_dic
-
-
-def run_calculations_for_threshold(folder_path, weights, model, pred_file, mode, threshold):
-    word_counts = get_word_count_of_articles(folder_path.format(model))
-    pre_process = pre_process_annotations(pred_file)
-    annotations = annotations_to_dic(pre_process)
-    article_ids = list(word_counts.keys())
-
-    accuracy_dic = {"TP": 0, "TN": 0, "FP": 0, "FN": 0}
-    ps_scores = {}
-
-    #Average Propaganda Density
-    apd, pd_scores = calc_average_prop_den_test(article_ids, annotations, word_counts, weights)
-
-    #Propaganda Technique Diversity
-    ptd, ptd_scores = calc_prop_tech_diversity_test(article_ids, len(weights.keys()), annotations)
-
-
-    #Normalize APD & PTD values to a range of 0-10
-    norm_apd, norm_ptd = normalize_score_0_to_10(apd, ptd, max(weights.values()))
-
-    for article_id in article_ids:
-        norm_pd, norm_article_ptd = normalize_score_0_to_10(pd_scores[article_id], ptd_scores[article_id], max(weights.values()))
-        ps = get_propaganda_effectiveness_score(norm_pd, norm_article_ptd)
-        accuracy_dic = update_accuracy_dictionary(accuracy_dic, mode, threshold, ps)
-        ps_scores.update({article_id: round(ps, 4)})
-
-
-    #Total Propaganda Score
-    total_count_propaganda_score = get_propaganda_effectiveness_score(norm_apd, norm_ptd)
-
-
-    return total_count_propaganda_score, accuracy_dic
-
-
-def get_performance_metrics(accuracy_dic):
-    #Accuracy
-    accuracy = (accuracy_dic["TP"] + accuracy_dic["TN"]) / sum(accuracy_dic.values())
-
-    #Precision
-    precision = accuracy_dic["TP"] / (accuracy_dic["TP"] + accuracy_dic["FP"])
-
-    #Recall
-    recall = accuracy_dic["TP"] / (accuracy_dic["TP"] + accuracy_dic["FN"])
-
-    #F1-Score
-    f1 = (2 * accuracy_dic["TP"]) / ((2 * accuracy_dic["TP"]) + accuracy_dic["FP"] + accuracy_dic["FN"])
-
-    return accuracy, precision, recall, f1
 
 
 

@@ -1,5 +1,6 @@
-# Trustworthiness of LLMs: An Evaluation of Propagandistic Misuse
+# Propaganda Effectiveness Score (LLM Trustworthiness: Quantifying the Propagandistic Effectiveness of LLM-generated News Articles.)
 
+Author: Robert Hemengül
 
 NOTE: This repository created in the context of a bachelor thesis focusing on the trustworthiness of Large Language Models (LLMs) at the University of Zurich under the supervision of Dr. Alberto Huertas from the Communication Systems Group (CSG) led by Prof. Dr. Burkhard Stiller.
 This code base only contains partially newly added scripts and builds upon the work of [Da San Martino et al. (2019)](https://aclanthology.org/D19-1565/) and their paper discussing
@@ -9,13 +10,14 @@ fine grained analysis of propaganda in news articles. The code base was download
 The following table lists the files that were **added** and files that were **edited** as part of this thesis.
 
 
- | Filename                       |   Status   | Description                                                                                                                                                  |
-|:-------------------------------|:----------:|--------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| generate_articles.py           |  **New**   | Contains methods to generate articles that are evaluated.                                                                                                    |
-| calc_metrics.py                |  **New**   | Contains methods to calculate metrics to measure the propagandistic effectiveness of LLM generated articles.                                                 |
-| compare.py                     |  **New**   | Contains methods to compare base scores and prop scores for the calculated metrics providing the absolute increase(**Δ**) and relative increase (**Ratio**). |
-| evaluate_generated_articles.py |  **New**   | Contains copied code from `eval()` method in `train.py` used to evaluate the generated news articles with regards to propaganda techniques used in them.     |
-| convert.py                     | **edited** | Was edited to get the number of words (`num_words`) used in the span where a propaganda technique was detected.                                              |
+ | Filename                       |   Status   | Description                                                                                                                                                            |
+|:-------------------------------|:----------:|------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| generate_articles.py           |  **New**   | Contains methods to generate articles that are evaluated.                                                                                                              |
+| calc_metrics.py                |  **New**   | Contains methods to calculate metrics to measure the propagandistic effectiveness of LLM generated articles.                                                           |
+| compare_metrics.py             |  **New**   | Contains methods to compare base scores and prop scores for the calculated metrics providing the absolute increase(**Δ**) and relative increase (**Ratio**).           |
+| threshold_evaluation.py        |  **New**   | Contains methods to evaluate a thresholds performance given the PES scores of a set of models, computing the **Accuracy**, **Precision**, **Recall** and **F1** score. |
+| evaluate_generated_articles.py |  **New**   | Contains copied code from `eval()` method in `train.py` used to evaluate the generated news articles with regards to propaganda techniques used in them.               |
+| convert.py                     | **edited** | Was edited to get the number of words (`num_words`) used in the span where a propaganda technique was detected.                                                        |
 
 ## Setup
 
@@ -119,7 +121,7 @@ The results will be saved to a file under `.\code\eval` with the name of `[Mode]
 NOTE: The results are normalized between a range of 0 to 10
 
 ## Compare Results
-To compare the results for the base and propaganda prompts we calculate the absolute increase(**Δ**) and relative increase (**Ratio**) of all three metrics (APD, PTD, PSE)
+To compare the results for the base and propaganda prompts we calculate the absolute increase(**Δ**) and relative increase (**Ratio**) of all three metrics (APD, PTD, PES)
 To get the comparison the we use compare_metrics.py by using the following command:
 
 ```
@@ -127,3 +129,15 @@ To get the comparison the we use compare_metrics.py by using the following comma
 ```
 
 The resulting files can be found in the `.\eval\comparison` folder
+
+## Treshold Evaluation
+The scores can also be used to evaluate a threshold by simply providing the two names for the folders containing base scores (`[Base Score Folder]`) and propaganda scores (`[Prop Score Folder]`).
+The threshold we want to evaluate is set by substituting `[Threshold]` by threshold value you want to evaluate.
+Additionally we also provide the `[Article Mode]` which is either set to `True` or left out, controlling wheter the thresholds are evaluated based on the 
+```
+./treshold_evaluation.sh  [Prop Score Folder] [Base Score Folder] [Threshold] [Article Mode]
+```
+
+The resulting file is stored in `.\code\eval\threshold_performance_model` when the`[Article Mode]` is omitted. When the  `[Article Mode]` is set tot `True` the file is stored under `.\code\eval\threshold_performance_article`.
+The file is named in the following style: `scores_[Threshold].txt`.
+
